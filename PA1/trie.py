@@ -39,11 +39,10 @@ class Trie:
 
 		current_node.data = data
 
-	def locate_word(self, word):
+	def has_word(self, word):
 		if word == '' or word == None:
 			return False
 
-		#go down trie
 		current_node = self.head
 		exits = True
 
@@ -54,25 +53,37 @@ class Trie:
 				exits = False
 				break
 
+		if exits and current_node.data == None:
+			exits = False
 
-		if exits == True:
-			return current_node.data
-		else:
-			return False
+		return exits
+
+	def get_data(self, word):
+		if not self.has_word(word):
+			raise ValueError('{} not found in trie'.format(word))
+
+		current_node = self.head
+		for letter in word:
+			current_node = current_node[letter]
+
+		return current_node.data
 
 def print_tree(node):
 		current_node = node
 		#print(type(current_node))
 		print(current_node.label)
+		print(current_node.data)
 		for child in current_node.children:
 			#print(child)
 			print_tree(current_node.children[child])
 
 if __name__ == '__main__':
 	trie = Trie()
-	words = 'hello y'
+	words = 'a b ab aba bba'
+	x = 0
 	for word in words.split():
-		trie.add(word, 0)
+		trie.add(word, x)
+		x= x + 1
 
-	print_tree(trie.head)
+	print(trie.has_word('aba'))
 
