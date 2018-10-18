@@ -1,26 +1,25 @@
-import trie as t
+#import trie as t
+import collections
+from sys import argv
+import time
 #Global Variables
 encode_option = 0
-delete_option = 0
+delete_option = 2
 
 def initalizeDict():
-	x = []
-	trie = t.Trie()
+	x = collections.OrderedDict()
 	for num in range(256):
 		char = chr(num)
-		trie.add(char, len(x))
-		x.append(makeByte(num))
-
-	return [x, trie]
+		x[char] = num
+	return x
 
 def initalizeDecoderDict():
-	x = []
-	trie = t.Trie()
+	x = collections.OrderedDict()
 	for num in range(256):
 		char = chr(num)
-		trie.add(char, len(x))
-		x.append(char)
-	return [x, trie]
+		x[num] = char
+	y = collections.OrderedDict()
+	return [x,y]
 
 def makeByte(number):
 	return number.to_bytes(2, byteorder='big')
@@ -29,58 +28,51 @@ def makeInt(bytes):
 	return int.from_bytes(bytes, byteorder='big')
 
 def captureMatch(f, dict):
-	return captureMatchHelper(f, dict[1], f.tell(), runningMatch='')
+	return captureMatchHelper(f, dict, f.tell(), runningMatch='')
 
-def captureMatchHelper(file, trie, startLocatation, runningMatch):
+def captureMatchHelper(file, dict, startLocatation, runningMatch):
 	current = file.read(1)
-	current = current
-	if current != None and current and trie.has_word(runningMatch + current):#runningMatch + current in dict:
+	if current != None and current and runningMatch + current in dict:
 		runningMatch = runningMatch + current
-		return captureMatchHelper(file, trie, file.tell(), runningMatch)
+		return captureMatchHelper(file, dict, file.tell(), runningMatch)
 	else:
 		if current:
 			x = file.seek(startLocatation, 0)
 			return (runningMatch, True)
 		return (runningMatch, False)
 
-
 def fcDictMod(dict, previous, current):
-	# if previous != None and previous + current[0] not in dict:
-	# 	dict[previous + current[0]] = makeByte(len(dict))
-	if previous != None and not dict[1].has_word(previous + current[0]):
-		enAddWord(dict, previous + current[0])
+	if previous != None and previous + current[0] not in dict:
+		dict[previous + current[0]] = len(dict)
 
-def enAddWord(dict, word):
-	#add to trie
-	length = len(dict[0])
-	dict[1].add(word, length)
-	#add to array
-	dict[0].append(makeByte(length))
+# def enAddWord(dict, word):
+# 	#add to trie
+# 	length = len(dict[0])
+# 	dict[1].add(word, length)
+# 	#add to array
+# 	dict[0].append(makeByte(length))
 
-def deAddWord(dict, word):
-	#add to trie
-	length = len(dict[0])
-	dict[1].add(word, length)
-	#add to array
-	dict[0].append(word)
+# def deAddWord(dict, word):
+# 	#add to trie
+# 	length = len(dict[0])
+# 	dict[1].add(word, length)
+# 	#add to array
+# 	dict[0].append(word)
 
 def cmDictMod(dict, previous, current):
-	# if previous != None and previous+current not in dict:
-	# 	dict[previous+current] = makeByte(len(dict))
-	if previous != None and not dict[1].has_word(previous + current):
-		enAddWord(dict, previous + current)
+	if previous != None and previous + current not in dict:
+		dict[previous + current] = len(dict)
 
 def fcDecodeDictMod(dict, previous, current):
-	#(type(current))
-	#print(current)
-	if previous != None and not dict[1].has_word(previous + current[0]):#previous+current[0] not in dict:
-		#dict[makeByte(len(dict))] = previous+current[0]
-		deAddWord(dict, previous + current[0])
+	if previous != None and previous + current[0] not in dict[1]:
+		dict[0][len(dict[0])] = previous + current[0]
+		dict[1][previous + current[0]] = len(dict[1])
 
 def cmDecodeDictMod(dict, previous, current):
-	if previous != None and not dict[1].has_word(previous + current):#previous+current[0] not in dict:
-		#dict[makeByte(len(dict))] = previous+current[0]
-		deAddWord(dict, previous + current)
+	if previous != None and previous + current not in dict[1]:
+		dict[0][len(dict[0])] = previous+current
+		dict[1][previous+current] = len(dict[1])
+		#deAddWord(dict, previous + current)
 
 def getSize(fileobject):
 	fileobject.seek(0,2) # move the cursor to the end of the file
@@ -89,19 +81,18 @@ def getSize(fileobject):
 	return size
 
 def writeFile(output, list):
-	#this will have to write binary to file
-	#print(list)
+
 	for thing in list:
 		output.write(thing)
 
 def dictNotFull(dict):
-	return True if len(dict[0]) < 65000 else False
+	return True if len(dict) < 65000 else False
 
-def restart(dict):
-	return initalizeDict(dict)
+def restart():
+	return initalizeDict()
 
-def decodeRestart(dict):
-	return initalizeDecoderDict(dict)
+def decodeRestart():
+	return initalizeDecoderDict()
 
 
 def dictModify(dict, prevMatch, currentMatch):
@@ -112,39 +103,44 @@ def dictModify(dict, prevMatch, currentMatch):
 			cmDictMod(dict, prevMatch, currentMatch)
 	else:
 		if delete_option == 0:
-			pass
-		# Freeze, do nothing
+			pass # Freeze, do nothing
 		elif delete_option == 1:
 			dict = restart()
 			dictModify(dict, prevMatch, currentMatch)
+		elif delete_option == 2:
+			dict.popitem(last=False)
+			dictModify(dict, prevMatch, currentMatch)
 
 def dictDecodeModify(dict, prevMatch, currentMatch):
-	if dictNotFull(dict):
+	if dictNotFull(dict[0]):
 		if encode_option == 0:
 			fcDecodeDictMod(dict, prevMatch, currentMatch)
 		else:
 			cmDecodeDictMod(dict, prevMatch, currentMatch)
 	else:
 		if delete_option == 0:
-			pass
-		# Freeze, do nothing
+			pass# Freeze, do nothing
 		elif delete_option == 1:
 			dict = decodeRestart()
 			dictDecodeModify(dict, prevMatch, currentMatch)
+		elif delete_option == 2:
+			pair = dict[0].popitem(last=False)
+			dict[1].pop(pair[1])
+			dictModify(dict, prevMatch, currentMatch)
 def encode():
 	dict = initalizeDict()
 	prevMatch = None
-	list = []
-	with open("TestData/TESTDATAREADME.txt") as f, open("TestData/TestOutput.txt", 'wb') as output:
+	with open("TestData/book1.txt") as f, open("TestData/TestOutput.txt", 'wb') as output:
 		print("size of input file " + str(getSize(f)))
-		#print("size of start output file " + str(getSize(output)))
 		for iter in range(getSize(f)):
 			currentMatch = captureMatch(f, dict)
 			if currentMatch[0]:
-				objectToAdd = dict[0][dict[1].get_data(currentMatch[0])]
-				#print(makeInt(objectToAdd))
-				#list.append(objectToAdd)
-				output.write(objectToAdd)
+				#removes and adds back in for LRU
+				objectToAdd = dict.pop(currentMatch[0])
+				dict[currentMatch[0]] = objectToAdd
+
+
+				output.write(makeByte(objectToAdd))
 
 				dictModify(dict, prevMatch, currentMatch[0])
 
@@ -152,34 +148,43 @@ def encode():
 
 			if not currentMatch[1]:
 				break
-		#writeFile(output, list)
+
 		print("size of end output file " + str(getSize(output)))
-		#print(dict[0])
-		#print(list)
 
 def decode():
 	dict = initalizeDecoderDict()
-	with open("TestData/TestOutput.txt", "rb") as binary_file, open("TestData/ResultsOutput.txt", 'w') as results:
-		stuff = [] #remove
+	with open("TestData/TestOutput.txt", "rb") as binary_file, open("TestData/book1Results.txt", 'w') as results:
 		prevMatch = None
 		for byteNum in range(int(getSize(binary_file)/2)):
 			byteInput = binary_file.read(2)
 
 			matchIndex = makeInt(byteInput)
 			currentMatch = dict[0][matchIndex]
-			stuff.append(currentMatch) #remove
+
+
 			results.write(currentMatch)
-			#print(byteNum, prevMatch) #remove
 			dictDecodeModify(dict, prevMatch, currentMatch)
 			prevMatch = currentMatch
 
-		#print(stuff)#remove
-		#writeFile(results, stuff) remove
+def validodateInput():
+	if len(argv) != 4:
+		print("Invalid Args, Must follow format: \"python compression.py <-n, -d> input output\"")
+	if argv[1] != '-n' and argv[1] != '-d':
+		print("Invalid Option: " + argv[1] + ', either -n (encode) or -d (decode)')
 
 
 if __name__ == "__main__":
+	validodateInput()
+	#print(type(argv[1]))
+	t0 = time.time()
 	encode()
-	print('start decoding')
+	#time.sleep(2.5)
+	t1 = time.time()
+	# print('start decoding')
 	decode()
+	t2 = time.time()
+
+	print(t1 - t0, 'seconds to encode')
+	print(t2 - t1, 'second to decode')
 
 
