@@ -1,0 +1,18 @@
+blockSize=8
+quauntAdj=3
+Part2C="python3 P2CD.py -c $blockSize $quauntAdj"
+Part2D="python3 P2CD.py -d"
+PSNR="python3 PSNR.py"
+
+echo "making directory"
+mkdir tmpFolder
+echo "directory made"
+
+for file in Kodak08gray #Kodak09gray Kodak12gray Kodak18gray Kodak21gray Kodak22gray
+do
+$Part2C "Kodak/$file.bmp" | $Part2D "tmpFolder/$file.bmp"
+echo "find PSNR:"; $PSNR "Kodak/$file.bmp" "tmpFolder/$file.bmp"
+
+done
+
+

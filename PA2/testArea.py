@@ -40,20 +40,21 @@ import math
 # print(x)
 # print(x + 4)
 # print(x)
-w = 8
-h = 4
-size = 2
-arr = np.arange(w*h).reshape((w,h))
+# w = 8
+# h = 4
+# size = 2
+# arr = np.arange(w*h).reshape((w,h))
+# print(arr)
+# arr = (arr.reshape(h // size, size, -1, size).swapaxes(1, 2).reshape(-1, size, size))
+# print(arr)
+# n, nrows, ncols = arr.shape
+# arr = (arr.reshape(h // nrows, -1, nrows, ncols).swapaxes(1, 2).reshape(w, h))
+# print(arr)
+
+
+arr = np.arange(9).reshape((3,3))
 print(arr)
-arr = (arr.reshape(h // size, size, -1, size).swapaxes(1, 2).reshape(-1, size, size))
-print(arr)
-n, nrows, ncols = arr.shape
-arr = (arr.reshape(h // nrows, -1, nrows, ncols).swapaxes(1, 2).reshape(w, h))
-print(arr)
-
-
-
-
+print(arr*.000000001)
 
 
 

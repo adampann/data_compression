@@ -2,15 +2,14 @@ import numpy as np
 from PIL import Image
 import math
 from sys import argv, stdout, stdin
+import os
 
-
-def quantizeMatrix(size):
+def quantizeMatrix(size, adjustment):
 	arr = np.array([[16, 11, 10, 16, 24, 40, 51, 61],[12, 12, 14, 19, 26, 58, 60, 55],[14, 13, 16, 24, 40, 57, 69, 56],[14, 17, 22, 29, 51, 87, 80, 62
 ],[18, 22, 37, 56, 68, 109, 103, 77],[24, 35, 55, 64, 81, 104, 113, 92],[49, 64, 78, 87, 103, 121, 120, 101],[72, 92, 95, 98, 112, 100, 103, 99]])
 	if size == 16:
 		arr = arr.repeat(2,axis=0).repeat(2,axis=1)
-
-	return arr
+	return arr * adjustment
 
 def naturalLevel(lst):
 	return lst - 128
@@ -18,12 +17,17 @@ def naturalLevel(lst):
 def unlevel(lst):
 	return lst + 128
 
-def formatImage(name, blockSize):
+def prepareImage(name):
 	im = Image.open(name)
+	#print(im, im.size)
+	rawData = np.array(im.getdata())  # get values of image
+	#print(rawData)
+	pix_values = np.array([x[0] for x in rawData])  # convert image to single # per pixel (x,y,z) => (x)
+	#print(pix_values)
+	return im, pix_values
 
-	rawData = np.array(im.getdata()) #get values of image
-
-	pix_values = np.array([x[0] for x in rawData]) #convert image to single # per pixel (x,y,z) => (x)
+def formatImage(name, blockSize):
+	im, pix_values = prepareImage(name)
 
 	pix_values = naturalLevel(pix_values)
 
@@ -199,7 +203,9 @@ def undiff(dcs):
 	for x in range(1, len(dcs)):
 		dcs[x] += dcs[x-1]
 
-def compression(fileName, blockSize):
+def compression(fileName, blockSize, quantAdjust):
+
+
 	arr, imsize = formatImage(fileName, blockSize)
 
 	# returns array of [blockSize * blockSize] blocks
@@ -209,7 +215,7 @@ def compression(fileName, blockSize):
 	dct = DctMatricForm()
 	DCTified = performDCT(dct, dct.transpose(), chunks)
 
-	quantized = performQuantize(quantizeMatrix(blockSize), np.copy(DCTified))
+	quantized = performQuantize(quantizeMatrix(blockSize, quantAdjust), np.copy(DCTified))
 
 	# returns list of DCs based off their difference to the one before it
 	dcs = DCDiff(quantized)
@@ -222,30 +228,28 @@ def compression(fileName, blockSize):
 	# format ACs into pairings of size and amplitude
 	dcformat = formatACDC(dcs)
 
-	outputdata = (blockSize, imsize, dcformat, acformat)
 
+	outputdata = (blockSize, imsize, dcformat, acformat, fileName, quantAdjust)
 
 
 	stdout.write(str(outputdata))
 
 
-
-def decompression():
+def decompression(writefileName):
 
 	inputData = stdin.read()
-	#inputData = data
 
-	fileName =  "testNAME"
-	newName = fileName.rsplit('.',1)[0]
-	# with open(newName, 'rb') as f:
-	#x = inpputData.decode()
+	#get data
 	inputData = eval(inputData)
 	blockSize = inputData[0]
 	imsize = inputData[1]
 	dcformat = inputData[2]
 	acformat = inputData[3]
-	#print(inputData)
+	fileName = inputData[4]
+	quantAdjust = float(inputData[5])
 
+
+	#print('quant:', quantAdjust)
 	dcs = unformat(dcformat)
 	acs = unformat(acformat)
 
@@ -254,7 +258,7 @@ def decompression():
 	blocks = rebuildDCAC(dcs, acs, blockSize)
 
 
-	blocks = deQuantize(quantizeMatrix(blockSize), blocks)
+	blocks = deQuantize(quantizeMatrix(blockSize, quantAdjust), blocks)
 
 	dct = DctMatricForm()
 	blocks = performDCT(dct.transpose(), dct, blocks)
@@ -267,19 +271,20 @@ def decompression():
 	img = Image.new("L", (imsize[0], imsize[1]))
 	# fromarray(arr.flatten(),'L')
 	img.putdata(arr.flatten())
-	#print(img)
-	# img.format = "PNG"
+
 	img.show()
 
-	#img.save('shouldWork.bmp')
+	img.save(writefileName)
+
 
 
 if __name__ == '__main__':
 	action = argv[1]
-
 	if action == '-c':
-		fileName = argv[2]
-		blockSize = int(argv[3])
-		compression(fileName, blockSize)
+		blockSize = int(argv[2])
+		QuantAdjust =  float(argv[3])
+		fileName = argv[4]
+		compression(fileName, blockSize, QuantAdjust)
+
 	elif action == '-d':
-		decompression()
+		decompression(argv[2])
