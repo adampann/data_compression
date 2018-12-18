@@ -1,5 +1,5 @@
 blockSize=8
-quauntAdj=3
+quauntAdj=5
 Part2C="python3 P2CD.py -c $blockSize $quauntAdj"
 Part2D="python3 P2CD.py -d"
 PSNR="python3 PSNR.py"
